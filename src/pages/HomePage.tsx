@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import ParticleBackground from '../components/ParticleBackground';
-import RialoLogo from '/logo.png';
 
 const HomePage = () => {
   return (
@@ -11,7 +10,7 @@ const HomePage = () => {
       <div className="relative z-10 flex flex-col items-center flex-grow justify-start px-4 pt-24 md:pt-32 pb-20">
         
         <header className="absolute top-4 right-4 animate-fade-in" style={{ animationDelay: '0.5s' }}>
-          <img src={RialoLogo} alt="Rialo Logo" className="w-24 h-24 md:w-32 md:h-32" />
+          <img src="/logo.png" alt="Rialo Logo" className="w-24 h-24 md:w-32 md:h-32" />
         </header>
 
         {/* Title Block */}

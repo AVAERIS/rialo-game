@@ -1,11 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 
 const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return; // Guard clause moved to the top
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -76,8 +76,9 @@ const ParticleBackground = () => {
       }
     };
 
+    let animationFrameId: number;
     const animate = () => {
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
       ctx!.clearRect(0, 0, canvas.width, canvas.height);
       particles.forEach(p => p.update());
       connect();
@@ -90,6 +91,7 @@ const ParticleBackground = () => {
 
     return () => {
       window.removeEventListener('resize', init);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
