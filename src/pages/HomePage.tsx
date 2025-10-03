@@ -1,73 +1,127 @@
 import { Link } from 'react-router-dom';
 import ParticleBackground from '../components/ParticleBackground';
 
+// --- TYPES ---
+type Game = {
+  emoji: string;
+  title: string;
+  description: string;
+  href: string;
+  status: 'active' | 'coming-soon';
+  bgColor: string;
+};
+
+type GameCardProps = {
+  game: Game;
+  index: number;
+};
+
+// --- CONFIGURATION ---
+const games: Game[] = [
+  {
+    emoji: '🐍',
+    title: 'Snake Game',
+    description: 'The classic arcade game with a chaotic twist.',
+    href: '/snake',
+    status: 'active',
+    bgColor: 'bg-rialo-mint/70',
+  },
+  {
+    emoji: '🎨',
+    title: 'Rialo Color Trap',
+    description: 'Follow the instructions... if you can.',
+    href: '/color-trap',
+    status: 'active',
+    bgColor: 'bg-blue-400/70',
+  },
+  {
+    emoji: '💥',
+    title: 'Minesweeper',
+    description: "Don't blow up. A classic logic puzzle.",
+    href: '#',
+    status: 'coming-soon',
+    bgColor: 'bg-gray-400/70',
+  },
+  {
+    emoji: '🧩',
+    title: 'Sliding Puzzle',
+    description: 'Slide the tiles to solve the puzzle.',
+    href: '#',
+    status: 'coming-soon',
+    bgColor: 'bg-gray-400/70',
+  },
+];
+
+// --- HELPER COMPONENTS ---
+const GameCard = ({ game, index }: GameCardProps) => {
+  const isComingSoon = game.status === 'coming-soon';
+
+  const cardContent = (
+    <div
+      className={`relative w-full h-full text-center no-underline transition-all duration-300 ease-in-out transform-gpu rounded-2xl shadow-lg group-hover:shadow-2xl group-hover:-translate-y-2 group-hover:scale-105 border border-rialo-dark/10 ${isComingSoon ? 'grayscale opacity-70 cursor-not-allowed' : ''}`}
+      style={{ animationDelay: `${index * 100 + 300}ms` }}
+    >
+      {isComingSoon && (
+        <div className="absolute top-2 right-2 bg-rialo-dark text-rialo-beige text-xs font-bold px-3 py-1 rounded-full z-10">
+          COMING SOON
+        </div>
+      )}
+      <div className={`flex items-center justify-center h-48 ${game.bgColor} rounded-t-2xl`}>
+        <p className="text-6xl transition-transform duration-300 group-hover:scale-110">{game.emoji}</p>
+      </div>
+      <div className="py-5 px-4 bg-white/50 backdrop-blur-sm rounded-b-2xl">
+        <h3 className="font-semibold text-2xl text-rialo-dark">{game.title}</h3>
+        <p className="text-sm text-rialo-dark/70 mt-2 h-10">{game.description}</p>
+      </div>
+    </div>
+  );
+
+  if (isComingSoon) {
+    return <div className="animate-fade-in-up">{cardContent}</div>;
+  }
+
+  return (
+    <Link to={game.href} className="group animate-fade-in-up">
+      {cardContent}
+    </Link>
+  );
+};
+
+
 const HomePage = () => {
   return (
-    <div className="bg-rialo-beige w-full min-h-screen overflow-hidden flex flex-col">
+    <div className="bg-rialo-beige w-full min-h-screen overflow-y-auto flex flex-col">
       <ParticleBackground />
       
-      {/* Main Content Wrapper */}
-      <div className="relative z-10 flex flex-col items-center flex-grow justify-start px-4 pt-24 md:pt-32 pb-20">
+      <div className="relative z-10 flex flex-col items-center flex-grow justify-start px-4 pt-20 md:pt-28 pb-20">
         
-        <header className="absolute top-4 right-4 animate-fade-in" style={{ animationDelay: '0.5s' }}>
-          <img src="/logo.png" alt="Rialo Logo" className="w-24 h-24 md:w-32 md:h-32" />
+        <header className="absolute top-4 right-4 z-20 animate-fade-in">
+          <img src="/logo.png" alt="Rialo Logo" className="w-24 h-24 md:w-28 md:h-28" />
         </header>
 
-        {/* Title Block */}
-        <div className="text-center">
+        <header className="text-center mb-16">
           <h1 
-            className="text-4xl md:text-6xl font-bold text-rialo-dark animate-fade-in-up"
-            style={{ animationDelay: '0.1s' }}
+            className="text-5xl md:text-7xl font-extrabold text-rialo-dark animate-fade-in-up"
           >
-            🎮 Rialo Games Portal
+            Rialo Arcade
           </h1>
           <p 
             className="mt-4 text-lg md:text-xl text-rialo-dark/70 animate-fade-in-up"
-            style={{ animationDelay: '0.2s' }}
+            style={{ animationDelay: '150ms' }}
           >
-            A collection of frustratingly fun games.
+            A curated collection of deceptively simple games.
           </p>
-        </div>
+        </header>
 
-        {/* Game Cards Block */}
-        <main 
-          className="mt-20 flex flex-wrap justify-center gap-10 animate-fade-in-up"
-          style={{ animationDelay: '0.4s' }}
-        >
-            {/* Snake Game Card */}
-            <Link to="/snake" className="group perspective-[1000px]">
-              <div className="text-center no-underline transition-all duration-500 transform-style-3d group-hover:rotate-x-[-3deg] group-hover:rotate-y-[5deg] group-hover:scale-105 rounded-lg shadow-xl w-72">
-                <div className="flex items-center justify-center h-40 bg-rialo-mint rounded-t-lg">
-                  <p className="text-5xl">🐍</p>
-                </div>
-                <div className="py-4 px-2 bg-white rounded-b-lg">
-                  <h3 className="font-semibold text-xl text-rialo-dark">Snake Game Rialo Edition</h3>
-                  <p className="text-sm text-rialo-dark/60 mt-1">The classic arcade game with a chaotic twist.</p>
-                </div>
-              </div>
-            </Link>
-
-            {/* Coming Soon Card */}
-            <div className="group perspective-[1000px]">
-               <div className="text-center no-underline rounded-lg shadow-lg opacity-50 cursor-not-allowed w-72">
-                <div className="flex items-center justify-center h-40 bg-gray-300 rounded-t-lg">
-                  <p className="text-5xl">⏳</p>
-                </div>
-                <div className="py-4 px-2 bg-gray-100 rounded-b-lg">
-                  <h3 className="font-semibold text-xl text-gray-500">Coming Soon...</h3>
-                   <p className="text-sm text-gray-400 mt-1">More games are on the way!</p>
-                </div>
-              </div>
-            </div>
+        <main className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-12 w-full max-w-6xl">
+          {games.map((game, index) => (
+            <GameCard key={game.title} game={game} index={index} />
+          ))}
         </main>
       </div>
 
-      {/* Footer */}
-      <footer 
-        className="relative z-10 w-full text-center py-4 animate-fade-in"
-        style={{ animationDelay: '0.5s' }}
-      >
-        <p className="text-sm text-gray-500">Powered by Avery Acee</p>
+      <footer className="relative z-10 w-full text-center py-6">
+        <p className="text-sm text-rialo-dark/60">© 2025 Rialo Games | Developed by Avery Acee</p>
       </footer>
     </div>
   );

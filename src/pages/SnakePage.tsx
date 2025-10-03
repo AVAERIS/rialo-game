@@ -138,7 +138,7 @@ const SnakePage = () => {
 
       setSnake(prevSnake => {
         const newSnake = [...prevSnake];
-        let head = { ...newSnake[0] };
+        const head = { ...newSnake[0] };
 
         switch (direction) {
           case 'UP': head.y -= 1; break;
