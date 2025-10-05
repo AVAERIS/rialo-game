@@ -4,6 +4,7 @@ import { useRef } from "react";
 import HomePage from "./pages/HomePage";
 import SnakePage from "./pages/SnakePage";
 import ColorTrapPage from "./pages/ColorTrapPage";
+import RialoBouncePage from "./pages/RialoBouncePage";
 
 function App() {
   const location = useLocation();
@@ -14,8 +15,8 @@ function App() {
       <TransitionGroup component={null}>
         <CSSTransition
           key={location.key}
-          classNames="page-slide"
-          timeout={400}
+          classNames="page-transition"
+          timeout={500}
           nodeRef={nodeRef}
           unmountOnExit
         >
@@ -24,6 +25,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/snake" element={<SnakePage />} />
               <Route path="/color-trap" element={<ColorTrapPage />} />
+              <Route path="/rialo-bounce" element={<RialoBouncePage />} />
             </Routes>
           </div>
         </CSSTransition>

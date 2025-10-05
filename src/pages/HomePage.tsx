@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ParticleBackground from '../components/ParticleBackground';
+import NebulaBackground from '../components/NebulaBackground';
 
 // --- TYPES ---
 type Game = {
@@ -33,6 +33,14 @@ const games: Game[] = [
     href: '/color-trap',
     status: 'active',
     bgColor: 'bg-blue-400/70',
+  },
+  {
+    emoji: '🏀',
+    title: 'Rialo Bounce',
+    description: 'Bounce the Rialo logo on the neon pads. How far can you jump?',
+    href: '/rialo-bounce',
+    status: 'active',
+    bgColor: 'bg-purple-400/70',
   },
   {
     emoji: '💥',
@@ -91,7 +99,7 @@ const GameCard = ({ game, index }: GameCardProps) => {
 const HomePage = () => {
   return (
     <div className="bg-rialo-beige w-full min-h-screen overflow-y-auto flex flex-col">
-      <ParticleBackground />
+      <NebulaBackground />
       
       <div className="relative z-10 flex flex-col items-center flex-grow justify-start px-4 pt-20 md:pt-28 pb-20">
         
