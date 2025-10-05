@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import RialoBounceCanvas from '../components/RialoBounceCanvas';
+import RialoBounceCanvas, { GameState } from '../components/RialoBounceCanvas';
 import { Link } from 'react-router-dom';
 import bgBounce from '../assets/bgBounce.png';
 import RotateDeviceOverlay from '../components/RotateDeviceOverlay';
 
 const RialoBouncePage: React.FC = () => {
   const [score, setScore] = useState(0);
-  const [gameState, setGameState] = useState('waiting');
+  const [gameState, setGameState] = useState<GameState>('waiting');
   const [isHovered, setIsHovered] = useState(false);
   const [isPortrait, setIsPortrait] = useState(false);
 

@@ -7,7 +7,8 @@ type Paddle = { x: number; width: number; height: number; };
 type Brick = { x: number; y: number; health: number; color: string; };
 type Particle = { x: number; y: number; vx: number; vy: number; size: number; color: string; life: number; };
 type PowerUp = { x: number; y: number; type: 'newBall'; size: number; status: number; };
-type GameState = 'waiting' | 'playing' | 'gameOver' | 'win';
+export type GameState = 'waiting' | 'playing' | 'gameOver' | 'win';
+
 
 // --- Color Palette ---
 const colors = {
@@ -831,7 +832,7 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
       }
     }
 
-    powerUpsRef.current.forEach((p, index) => {
+    powerUpsRef.current.forEach(p => {
       if (p.status === 1) {
         p.y += 2 * delta;
         if (p.y > canvas.height) {
