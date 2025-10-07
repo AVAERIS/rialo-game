@@ -1,36 +1,45 @@
-import { Routes, Route, useLocation } from "react-router-dom";
-import { TransitionGroup, CSSTransition } from "react-transition-group";
-import { useRef } from "react";
+import { useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { TransitionContext } from './context/TransitionContext';
+import { TransitionOverlay } from './components/TransitionOverlay';
 import HomePage from "./pages/HomePage";
 import SnakePage from "./pages/SnakePage";
 import ColorTrapPage from "./pages/ColorTrapPage";
 import RialoBouncePage from "./pages/RialoBouncePage";
 
 function App() {
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const navigate = useNavigate();
   const location = useLocation();
-  const nodeRef = useRef(null);
+
+  const startTransition = (to: string) => {
+    if (location.pathname === to) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      navigate(to);
+      
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 100);
+    }, 200); 
+  };
 
   return (
-    <div className="bg-rialo-beige text-rialo-dark min-h-screen font-sans relative">
-      <TransitionGroup component={null}>
-        <CSSTransition
-          key={location.key}
-          classNames="page-transition"
-          timeout={500}
-          nodeRef={nodeRef}
-          unmountOnExit
-        >
-          <div ref={nodeRef} className="absolute w-full">
-            <Routes location={location}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/snake" element={<SnakePage />} />
-              <Route path="/color-trap" element={<ColorTrapPage />} />
-              <Route path="/rialo-bounce" element={<RialoBouncePage />} />
-            </Routes>
-          </div>
-        </CSSTransition>
-      </TransitionGroup>
-    </div>
+    <TransitionContext.Provider value={{ startTransition }}>
+      <div className="bg-rialo-beige text-rialo-dark min-h-screen font-sans">
+        <AnimatePresence>
+          {isTransitioning && <TransitionOverlay />}
+        </AnimatePresence>
+
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/snake" element={<SnakePage />} />
+          <Route path="/color-trap" element={<ColorTrapPage />} />
+          <Route path="/rialo-bounce" element={<RialoBouncePage />} />
+        </Routes>
+      </div>
+    </TransitionContext.Provider>
   );
 }
 

@@ -1,21 +1,26 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTransition } from '../context/TransitionContext';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
+import CircularTimer from '../components/CircularTimer';
+import NebulaBackground from '../components/NebulaBackground';
 
-// --- CONFIGURATION ---
-const INITIAL_TIME_PER_ROUND = 3.0;
-const MIN_TIME_PER_ROUND = 1.2;
-const ROUNDS_PER_GAME = 10;
+
 const COLORS = [
   { name: 'RED', hex: '#ef4444' },
   { name: 'BLUE', hex: '#3b82f6' },
   { name: 'GREEN', hex: '#22c55e' },
   { name: 'YELLOW', hex: '#eab308' },
+  { name: 'PURPLE', hex: '#a855f7' },
+  { name: 'ORANGE', hex: '#f97316' },
+  { name: 'PINK', hex: '#ec4899' },
+  { name: 'CYAN', hex: '#06b6d4' },
 ];
+const BASE_PROGRESS_RATE = 0.11; 
+const CORRECT_ANSWER_BONUS = 13; 
+const INCORRECT_ANSWER_PENALTY = 5; 
 
-// --- TYPES ---
-type GameScreen = 'intro' | 'playing' | 'finished';
-type ColorData = { name: string; hex: string };
+
+type ColorData = { name: string; hex: string; randomBg: string; };
 type Instruction = {
   text: string;
   color: string;
@@ -23,18 +28,14 @@ type Instruction = {
   key: number;
 };
 
-// --- HELPER FUNCTIONS ---
+
 const generateInstruction = (roundKey: number): Instruction => {
   const correctColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-  let displayColor;
-  do {
-    displayColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-  } while (displayColor.name === correctColor.name);
+  const displayColor = COLORS[Math.floor(Math.random() * COLORS.length)];
 
-  const isEasy = Math.random() < 0.2;
   return {
-    text: `Click ${correctColor.name}`,
-    color: isEasy ? correctColor.hex : displayColor.hex,
+    text: correctColor.name,
+    color: displayColor.hex,
     correctAnswer: correctColor.name,
     key: roundKey,
   };
@@ -44,127 +45,116 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return [...array].sort(() => Math.random() - 0.5);
 };
 
-// --- MAIN PAGE COMPONENT ---
+
 const ColorTrapPage = () => {
-  const [screen, setScreen] = useState<GameScreen>('intro');
   const [score, setScore] = useState(0);
-  const [round, setRound] = useState(0);
+  const [isPaused, setIsPaused] = useState(true);
+  const [isGameOver, setIsGameOver] = useState(false);
   const [instruction, setInstruction] = useState<Instruction | null>(null);
   const [buttons, setButtons] = useState<ColorData[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | '' | null>(null);
   const [gameLevel, setGameLevel] = useState(0);
-  const [dynamicRoundTime, setDynamicRoundTime] = useState(INITIAL_TIME_PER_ROUND);
+  const [progress, setProgress] = useState(0);
 
-  const screenRef = useRef(null);
   const instructionRef = useRef(null);
   const scoreRef = useRef(null);
+  const gameLoopRef = useRef<number>();
 
-  const navigate = useNavigate();
+  const { startTransition } = useTransition();
+  const handleExit = () => startTransition('/');
 
-  const handleExit = () => navigate('/');
-
-  const handleRestart = () => {
-    const newBaseTime = Math.max(MIN_TIME_PER_ROUND, INITIAL_TIME_PER_ROUND - gameLevel * 0.2);
-    setDynamicRoundTime(newBaseTime);
-    setScore(0);
-    setRound(0);
-    setScreen('playing');
-    setTimeout(nextRound, 400);
-  };
-
-  const baseTimeForLevel = useCallback(() => {
-    return Math.max(MIN_TIME_PER_ROUND, INITIAL_TIME_PER_ROUND - gameLevel * 0.2);
+  const progressRate = useCallback(() => {
+    return BASE_PROGRESS_RATE + gameLevel * 0.02;
   }, [gameLevel]);
 
-  const nextRound = useCallback(() => {
+  function nextRound() {
     setFeedback(null);
-    if (round >= ROUNDS_PER_GAME) {
-      setScreen('finished');
-      return;
-    }
     const roundKey = Date.now();
     const newInstruction = generateInstruction(roundKey);
-    const shuffledButtons = shuffleArray(COLORS);
+    
+    
+    const buttonTextColors = shuffleArray(COLORS);
+    const buttonBgColors = shuffleArray(COLORS);
+
+    const shuffledButtons = buttonTextColors.map((textColor, index) => {
+      let bgColor = buttonBgColors[index];
+      
+      if (textColor.name === bgColor.name) {
+        const nextIndex = (index + 1) % buttonBgColors.length;
+        bgColor = buttonBgColors[nextIndex];
+      }
+      return { ...textColor, randomBg: bgColor.hex };
+    });
+
     setInstruction(newInstruction);
     setButtons(shuffledButtons);
-    setRound(prev => prev + 1);
-  }, [round]);
+  }
 
-  const handleAnswer = (answer: string) => {
-    if (feedback) return;
+  function unpauseGame() {
+    
+    if (isPaused && !isGameOver) {
+      setIsPaused(false);
+      nextRound();
+      return;
+    }
+
+    
+    if (isGameOver) {
+      setGameLevel(prev => prev + 1);
+      setScore(0);
+      setProgress(0);
+      setIsGameOver(false);
+      setIsPaused(false); 
+      nextRound();
+      return;
+    }
+  }
+
+  function handleAnswer(answer: string) {
+    if (feedback || isPaused || isGameOver) return;
 
     if (answer === instruction?.correctAnswer) {
       setScore(prev => prev + 1);
       setFeedback('correct');
-      setDynamicRoundTime(prev => Math.max(MIN_TIME_PER_ROUND, prev - 0.1));
+      setProgress(p => Math.max(0, p - CORRECT_ANSWER_BONUS));
     } else {
       setFeedback('incorrect');
-      setDynamicRoundTime(prev => Math.min(baseTimeForLevel(), prev + 0.5));
+      setProgress(p => Math.min(100, p + INCORRECT_ANSWER_PENALTY));
     }
-    setTimeout(nextRound, 400);
-  };
+    setTimeout(nextRound, 200);
+  }
 
+  
   useEffect(() => {
-    if (screen === 'playing' && round > 0) {
-      const timerId = setTimeout(() => {
-        setFeedback('incorrect');
-        setDynamicRoundTime(baseTimeForLevel());
-        setTimeout(nextRound, 400);
-      }, dynamicRoundTime * 1000);
+    const loop = () => {
+      if (!isPaused && !isGameOver) {
+        setProgress(p => {
+          const newProgress = p + progressRate();
+          if (newProgress >= 100) {
+            setIsGameOver(true);
+            return 100;
+          }
+          return newProgress;
+        });
+      }
+      gameLoopRef.current = requestAnimationFrame(loop);
+    };
 
-      return () => clearTimeout(timerId);
-    }
-  }, [screen, round, dynamicRoundTime, nextRound, baseTimeForLevel]);
+    gameLoopRef.current = requestAnimationFrame(loop);
 
-  const startGame = () => {
-    if (screen === 'finished') {
-      setGameLevel(prev => prev + 1);
-    }
-    const newBaseTime = Math.max(MIN_TIME_PER_ROUND, INITIAL_TIME_PER_ROUND - (screen === 'finished' ? gameLevel + 1 : gameLevel) * 0.2);
-    setDynamicRoundTime(newBaseTime);
-    setScore(0);
-    setRound(0);
-    setScreen('playing');
-    setTimeout(nextRound, 400);
-  };
+    return () => {
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+      }
+    };
+  }, [isPaused, isGameOver, progressRate]);
 
-  const renderScreen = () => {
-    switch (screen) {
-      case 'intro':
-        return (
-          <div ref={screenRef} className="w-full max-w-lg mx-auto text-center p-6 sm:p-10 rounded-xl border border-rialo-dark shadow-lg">
-            <div className="mb-10 md:mb-12">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-2">🎨 Color Trap</h1>
-              <p className="text-lg sm:text-xl text-rialo-dark/70">Click the word, not the color. Test your focus!</p>
-            </div>
-            <button onClick={startGame} className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 active:scale-95 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all duration-150">
-              Start Game
-            </button>
-          </div>
-        );
-      case 'finished':
-        return (
-          <div ref={screenRef} className="w-full max-w-lg mx-auto text-center p-6 sm:p-10 rounded-xl border border-rialo-dark shadow-lg">
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">Game Over!</h2>
-            <p className="text-2xl sm:text-3xl mb-2">Final Score: <span className="font-bold text-yellow-400">{score}</span></p>
-            <p className="text-base text-rialo-dark/70 mb-8">Next Level: {gameLevel + 1}</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button onClick={handleExit} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-5 rounded-lg text-lg transition-all duration-150">
-                Exit
-              </button>
-              <button onClick={handleRestart} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-5 rounded-lg text-lg transition-all duration-150">
-                Restart Level
-              </button>
-              <button onClick={startGame} className="bg-green-500 hover:bg-green-600 active:bg-green-700 active:scale-95 text-white font-bold py-3 px-5 rounded-lg text-lg transition-all duration-150">
-                Next Level
-              </button>
-            </div>
-          </div>
-        );
-      case 'playing':
-        return (
-          <div ref={screenRef} className={`w-full max-w-2xl mx-auto text-center transition-colors duration-300 ${feedback === 'incorrect' ? 'bg-red-500/20' : ''} rounded-xl border border-rialo-dark shadow-lg p-4 sm:p-6`}>
-            <div className="flex justify-between items-center mb-6 md:mb-8 text-base sm:text-xl">
+  return (
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-black p-4">
+      <NebulaBackground />
+      <main className="bg-slate-800/70 backdrop-blur-xl border border-white/10 w-full max-w-lg md:max-w-xl rounded-2xl shadow-2xl shadow-sky-500/10 p-4 sm:p-6 flex flex-col">
+        <div className={`w-full text-center transition-colors duration-300 rounded-xl`}>
+            <div className="flex justify-center items-center mb-6 md:mb-8 text-base sm:text-xl text-slate-200">
               <div className="font-bold flex items-center">Score:
                 <SwitchTransition>
                   <CSSTransition nodeRef={scoreRef} key={score} timeout={200} classNames="score-update" unmountOnExit>
@@ -172,50 +162,61 @@ const ColorTrapPage = () => {
                   </CSSTransition>
                 </SwitchTransition>
               </div>
-              <div className="font-bold">Round: {round}/{ROUNDS_PER_GAME}</div>
             </div>
-            <SwitchTransition>
-              <CSSTransition nodeRef={instructionRef} key={instruction?.key} timeout={300} classNames="fade-up" unmountOnExit>
-                <div ref={instructionRef} className="mb-8 md:mb-10 min-h-[70px] sm:min-h-[80px]">
-                  {instruction && (
-                    <h1 style={{ color: instruction.color }} className={`text-3xl sm:text-4xl md:text-5xl font-bold transition-transform duration-200 ${feedback === 'incorrect' ? 'animate-shake' : ''}`}>
-                      {instruction.text}
-                    </h1>
-                  )}
-                </div>
-              </CSSTransition>
-            </SwitchTransition>
-            <div className="relative w-full h-1.5 bg-gray-300 rounded-full mb-8 md:mb-12">
-              {instruction && <div key={instruction.key} className="absolute top-0 left-0 h-1.5 bg-yellow-400 rounded-full animate-countdown" style={{ animationDuration: `${dynamicRoundTime}s` }}></div>}
+            <div ref={instructionRef} className="mb-4 md:mb-6 flex flex-col items-center justify-center">
+              <div className="h-28 sm:h-32 flex items-center justify-center">
+                <CircularTimer progress={progress} />
+              </div>
+              <div className="min-h-[70px] sm:min-h-[80px] flex items-center justify-center">
+                {instruction && (
+                  <h1 style={{ color: instruction.color }} className={`text-3xl sm:text-4xl md:text-5xl font-bold transition-transform duration-200 ${feedback === 'incorrect' ? 'animate-shake' : ''}`}>
+                    {instruction.text}
+                  </h1>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {buttons.map(color => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+              {buttons.length > 0 ? buttons.map(buttonData => (
                 <button
-                  key={color.name}
-                  onClick={() => handleAnswer(color.name)}
-                  className={`p-6 sm:p-8 rounded-lg text-xl sm:text-2xl font-bold text-white transition-all duration-150 transform active:scale-100 ${feedback === 'correct' && instruction?.correctAnswer === color.name ? 'animate-correct-pop' : 'hover:scale-105'}`}
-                  style={{ backgroundColor: color.hex }}
+                  key={buttonData.name}
+                  onClick={() => handleAnswer(buttonData.name)}
+                  className={`p-3 sm:p-4 rounded-lg text-lg sm:text-xl font-bold text-white transition-all duration-150 transform active:scale-100 h-[81px] sm:h-[97px] flex items-center justify-center ${feedback === 'correct' && instruction?.correctAnswer === buttonData.name ? 'animate-correct-pop' : 'hover:scale-105'}`}
+                  style={{ backgroundColor: buttonData.randomBg }}
                 >
-                  {color.name}
+                  {buttonData.name}
                 </button>
+              )) : COLORS.map(color => (
+                <div key={color.name} className="p-3 sm:p-4 rounded-lg h-[81px] sm:h-[97px] bg-gray-500/20 animate-pulse" />
               ))}
             </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
+        </div>
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-rialo-beige text-rialo-dark p-4 overflow-hidden">
-      <SwitchTransition>
-        <CSSTransition nodeRef={screenRef} key={screen} timeout={300} classNames="fade" unmountOnExit>
-          <div ref={screenRef} className="w-full px-2 sm:px-4">
-            {renderScreen()}
+        {isPaused && (
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center cursor-pointer rounded-2xl" onClick={unpauseGame}>
+                <div className="text-center">
+                    <h2 className="text-4xl font-bold text-white text-shadow">🎨 Color Trap</h2>
+                    <p className="text-xl text-slate-300 mt-2">Click to Start</p>
+                </div>
+            </div>
+        )}
+      </main>
+      
+      <footer className="relative z-10 text-center mt-6">
+          <button onClick={handleExit} className="text-sm text-slate-400 underline hover:text-slate-200 transition-colors">Back to Home</button>
+      </footer>
+
+      {isGameOver && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center transition-opacity duration-300 z-50 p-4">
+          <div className="bg-slate-800/80 border border-white/10 p-8 rounded-xl text-center shadow-2xl max-w-sm w-full">
+            <h2 className="text-3xl font-bold mb-2 text-slate-100">Game Over!</h2>
+            <p className="text-xl mb-6 text-slate-300">Final Score: {score}</p>
+            <div className="flex gap-4 justify-center">
+              <button onClick={handleExit} className="px-6 py-2 bg-slate-700 font-semibold rounded-lg hover:bg-slate-600 transition-colors">Back to Home</button>
+              <button onClick={unpauseGame} className="px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 transition-colors">Play Again</button>
+            </div>
           </div>
-        </CSSTransition>
-      </SwitchTransition>
+        </div> 
+      )}
     </div>
   );
 };

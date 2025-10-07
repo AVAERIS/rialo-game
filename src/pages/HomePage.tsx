@@ -1,7 +1,8 @@
-import { Link } from 'react-router-dom';
 import NebulaBackground from '../components/NebulaBackground';
 
-// --- TYPES ---
+import { useTransition } from '../context/TransitionContext';
+
+
 type Game = {
   emoji: string;
   title: string;
@@ -16,7 +17,7 @@ type GameCardProps = {
   index: number;
 };
 
-// --- CONFIGURATION ---
+
 const games: Game[] = [
   {
     emoji: '🐍',
@@ -28,7 +29,7 @@ const games: Game[] = [
   },
   {
     emoji: '🎨',
-    title: 'Rialo Color Trap',
+    title: 'Color Trap',
     description: 'Follow the instructions... if you can.',
     href: '/color-trap',
     status: 'active',
@@ -60,9 +61,15 @@ const games: Game[] = [
   },
 ];
 
-// --- HELPER COMPONENTS ---
+
 const GameCard = ({ game, index }: GameCardProps) => {
+  const { startTransition } = useTransition();
   const isComingSoon = game.status === 'coming-soon';
+
+  const handleCardClick = () => {
+    if (isComingSoon) return;
+    startTransition(game.href);
+  };
 
   const cardContent = (
     <div
@@ -74,62 +81,54 @@ const GameCard = ({ game, index }: GameCardProps) => {
           COMING SOON
         </div>
       )}
-      <div className={`flex items-center justify-center h-48 ${game.bgColor} rounded-t-2xl`}>
-        <p className="text-6xl transition-transform duration-300 group-hover:scale-110">{game.emoji}</p>
+      <div className={`flex items-center justify-center h-24 sm:h-28 bg-blue-400/70 rounded-t-2xl`}>
+        <p className="text-4xl sm:text-5xl transition-transform duration-300 group-hover:scale-110">{game.emoji}</p>
       </div>
-      <div className="py-5 px-4 bg-white/50 backdrop-blur-sm rounded-b-2xl">
-        <h3 className="font-semibold text-2xl text-rialo-dark">{game.title}</h3>
-        <p className="text-sm text-rialo-dark/70 mt-2 h-10">{game.description}</p>
+      <div className="py-2 px-2 bg-white/50 backdrop-blur-sm rounded-b-2xl">
+        <h3 className="font-semibold text-lg sm:text-xl text-rialo-dark">{game.title}</h3>
       </div>
     </div>
   );
 
-  if (isComingSoon) {
-    return <div className="animate-fade-in-up">{cardContent}</div>;
-  }
-
   return (
-    <Link to={game.href} className="group animate-fade-in-up">
+    <div
+      className="group animate-fade-in-up transition-transform duration-100 active:scale-95 cursor-pointer"
+      onClick={handleCardClick}
+    >
       {cardContent}
-    </Link>
+    </div>
   );
 };
 
 
 const HomePage = () => {
+
   return (
-    <div className="bg-rialo-beige w-full min-h-screen overflow-y-auto flex flex-col">
+    <div className="bg-rialo-beige w-full min-h-screen flex flex-col">
       <NebulaBackground />
+
       
-      <div className="relative z-10 flex flex-col items-center flex-grow justify-start px-4 pt-20 md:pt-28 pb-20">
-        
-        <header className="absolute top-4 right-4 z-20 animate-fade-in">
-          <img src="/logo.png" alt="Rialo Logo" className="w-24 h-24 md:w-28 md:h-28" />
-        </header>
+      <header className="relative z-10 text-center pt-8 pb-4 px-4">
+        <div className="absolute top-4 right-4 z-20">
+          <img src="/logo.png" alt="Rialo Logo" className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 [filter:drop-shadow(0_0_12px_white)]" />
+        </div>
+        <h1 className="font-orbitron text-4xl sm:text-6xl lg:text-8xl font-extrabold text-rialo-dark [text-shadow:-1px_-1px_0_rgba(255,255,255,0.9),_1px_-1px_0_rgba(255,255,255,0.9),_-1px_1px_0_rgba(255,255,255,0.9),_1px_1px_0_rgba(255,255,255,0.9)]">
+          Rialo Arcade
+        </h1>
+      </header>
 
-        <header className="text-center mb-16">
-          <h1 
-            className="text-5xl md:text-7xl font-extrabold text-rialo-dark animate-fade-in-up"
-          >
-            Rialo Arcade
-          </h1>
-          <p 
-            className="mt-4 text-lg md:text-xl text-rialo-dark/70 animate-fade-in-up"
-            style={{ animationDelay: '150ms' }}
-          >
-            A curated collection of deceptively simple games.
-          </p>
-        </header>
-
-        <main className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-12 w-full max-w-6xl">
+      
+      <main className="relative z-10 flex-grow flex items-center justify-center p-4">
+        <div className="grid grid-cols-3 gap-4 w-full max-w-4xl">
           {games.map((game, index) => (
             <GameCard key={game.title} game={game} index={index} />
           ))}
-        </main>
-      </div>
+        </div>
+      </main>
 
-      <footer className="relative z-10 w-full text-center py-6">
-        <p className="text-sm text-rialo-dark/60">© 2025 Rialo Games | Developed by Avery Acee</p>
+      
+      <footer className="relative z-10 w-full text-center py-3">
+        <p className="font-orbitron text-sm text-white [text-shadow:-1px_-1px_0_rgba(0,0,0,0.7),_1px_-1px_0_rgba(0,0,0,0.7),_-1px_1px_0_rgba(0,0,0,0.7),_1px_1px_0_rgba(0,0,0,0.7)]">© 2025 Rialo Games | Developed by Avery Acee</p>
       </footer>
     </div>
   );

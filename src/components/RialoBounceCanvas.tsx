@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import rlogo from '../assets/logo.png';
 
-// --- Types ---
+
 type Ball = { x: number; y: number; vx: number; vy: number; radius: number; trail: {x: number, y: number}[] };
 type Paddle = { x: number; width: number; height: number; };
 type Brick = { x: number; y: number; health: number; color: string; };
@@ -10,7 +10,7 @@ type PowerUp = { x: number; y: number; type: 'newBall'; size: number; status: nu
 export type GameState = 'waiting' | 'playing' | 'gameOver' | 'win';
 
 
-// --- Color Palette ---
+
 const colors = {
   background: ['#1a2a6c', '#b21f1f', '#fdbb2d'],
   paddle: '#b21f1f',
@@ -23,11 +23,11 @@ const colors = {
   frame: '#DAB452',
 };
 
-// --- Brick Patterns ---
-const brickRowCount = 15;
-const brickColumnCount = 20;
+
+const brickRowCount = 10;
+const brickColumnCount = 12;
 const brickPatterns = [
-  // Pattern 1: Pyramid
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let r = 0; r < brickRowCount / 2; r++) {
@@ -37,7 +37,7 @@ const brickPatterns = [
     }
     return pattern;
   },
-  // Pattern 2: Inverted Pyramid
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     const midRow = Math.floor(brickRowCount / 2);
@@ -48,33 +48,33 @@ const brickPatterns = [
     }
     return pattern;
   },
-  // Pattern 3: Checkerboard (Denser)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if ((c + r) % 2 === 0) {
           pattern[c][r] = 1;
-        } else if (Math.random() < 0.3) { // 30% chance for empty spots
+        } else if (Math.random() < 0.3) { 
           pattern[c][r] = 1;
         }
       }
     }
     return pattern;
   },
-  // Pattern 4: Hollow Center (Filled)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(1));
     for (let c = 5; c < brickColumnCount - 5; c++) {
       for (let r = 4; r < brickRowCount - 4; r++) {
-        if (Math.random() > 0.4) { // 60% chance of being empty
+        if (Math.random() > 0.4) { 
           pattern[c][r] = 0;
         }
       }
     }
     return pattern;
   },
-  // Pattern 5: Vertical Stripes (Denser)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
@@ -88,7 +88,7 @@ const brickPatterns = [
     }
     return pattern;
   },
-  // Pattern 6: Horizontal Stripes (Denser)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
@@ -102,52 +102,56 @@ const brickPatterns = [
     }
     return pattern;
   },
-  // Pattern 7: Fortress (Filled)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if (c === 0 || c === brickColumnCount - 1 || r === 0 || r === brickRowCount - 1) {
-          pattern[c][r] = 1; // Walls
+          pattern[c][r] = 1; 
         } else if (Math.random() < 0.35) {
-          pattern[c][r] = 1; // Inner fill
+          pattern[c][r] = 1; 
         }
       }
     }
     return pattern;
   },
-  // Pattern 8: Random Noise (Very Dense)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
-        if (Math.random() > 0.25) pattern[c][r] = 1; // 75% density
+        if (Math.random() > 0.25) pattern[c][r] = 1; 
       }
     }
     return pattern;
   },
-  // Pattern 9: Smiley Face (with more filler)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
-    // Eyes
-    pattern[6][4] = 1; pattern[7][4] = 1;
-    pattern[12][4] = 1; pattern[13][4] = 1;
-    // Smile
-    pattern[4][8] = 1;
-    pattern[5][9] = 1; pattern[6][9] = 1; pattern[7][9] = 1; pattern[8][9] = 1; pattern[9][9] = 1; pattern[10][9] = 1; pattern[11][9] = 1; pattern[12][9] = 1; pattern[13][9] = 1;
-    pattern[14][8] = 1;
+    
+    pattern[3][3] = 1; pattern[8][3] = 1;
+    
+    pattern[2][5] = 1;
+    pattern[3][6] = 1;
+    pattern[4][6] = 1;
+    pattern[5][6] = 1;
+    pattern[6][6] = 1;
+    pattern[7][6] = 1;
+    pattern[8][6] = 1;
+    pattern[9][5] = 1;
 
-    // Add random filler
+    
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
-        if (pattern[c][r] === 0 && Math.random() < 0.25) { // 25% filler
+        if (pattern[c][r] === 0 && Math.random() < 0.25) { 
           pattern[c][r] = 1;
         }
       }
     }
     return pattern;
   },
-  // Pattern 10: Diamond
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     const midC = Math.floor(brickColumnCount / 2);
@@ -164,7 +168,7 @@ const brickPatterns = [
     }
     return pattern;
   },
-  // Pattern 11: Thick Diagonal Lines (top-left to bottom-right)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let i = 0; i < brickColumnCount + brickRowCount; i+=2) {
@@ -179,7 +183,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 12: Thick Diagonal Lines (top-right to bottom-left)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let i = 0; i < brickColumnCount + brickRowCount; i+=2) {
@@ -194,7 +198,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 13: Thick Cross (with filler)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     const midC = Math.floor(brickColumnCount / 2);
@@ -207,7 +211,7 @@ const brickPatterns = [
       pattern[midC][r] = 1;
       pattern[midC+1][r] = 1;
     }
-    // Add random filler
+    
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if (pattern[c][r] === 0 && Math.random() < 0.25) {
@@ -218,7 +222,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 14: Thick X-Shape (with filler)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let i = 0; i < Math.min(brickColumnCount, brickRowCount); i++) {
@@ -227,7 +231,7 @@ const brickPatterns = [
       pattern[brickColumnCount - 1 - i][i] = 1;
       if(brickColumnCount - 2 - i >= 0 && i+1 < brickRowCount) pattern[brickColumnCount - 2 - i][i+1] = 1;
     }
-    // Add random filler
+    
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if (pattern[c][r] === 0 && Math.random() < 0.25) {
@@ -238,7 +242,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 15: Filled Heart (with filler)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     const midC = Math.floor(brickColumnCount / 2);
@@ -249,7 +253,7 @@ const brickPatterns = [
             }
         }
     }
-    // Add random filler
+    
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if (pattern[c][r] === 0 && Math.random() < 0.25) {
@@ -260,10 +264,10 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 16: Filled Star (with filler)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
-    const midC = 10, midR = 7;
+    const midC = Math.floor(brickColumnCount / 2), midR = 7;
     for(let r=0; r<brickRowCount; r++) {
         for(let c=0; c<brickColumnCount; c++) {
             if(Math.abs(c-midC) + Math.abs(r-midR) < 5) pattern[c][r] = 1;
@@ -275,7 +279,7 @@ const brickPatterns = [
     pattern[midC-2][midR] = 1; pattern[midC][midR] = 1; pattern[midC+2][midR] = 1;
     pattern[midC-1][midR+1] = 1; pattern[midC+1][midR+1] = 1;
     pattern[midC-2][midR+2] = 1; pattern[midC+2][midR+2] = 1;
-    // Add random filler
+    
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if (pattern[c][r] === 0 && Math.random() < 0.25) {
@@ -286,15 +290,15 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 17: Thick Arrow Up (with filler)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
-    const midC = 10;
+    const midC = Math.floor(brickColumnCount / 2);
     for(let r=2; r<10; r++) { pattern[midC][r] = 1; pattern[midC-1][r] = 1; }
     pattern[midC-1][3] = 1; pattern[midC+1][3] = 1;
     pattern[midC-2][4] = 1; pattern[midC+2][4] = 1;
     pattern[midC-3][5] = 1; pattern[midC+3][5] = 1;
-    // Add random filler
+    
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if (pattern[c][r] === 0 && Math.random() < 0.25) {
@@ -305,17 +309,17 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 18: Full Wall
+  
   () => {
     return Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(1));
   },
 
-  // Pattern 19: Wall with Window (Filled)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(1));
     for (let c = 7; c < brickColumnCount - 7; c++) {
       for (let r = 5; r < brickRowCount - 5; r++) {
-        if (Math.random() > 0.4) { // 60% chance of being empty
+        if (Math.random() > 0.4) { 
           pattern[c][r] = 0;
         }
       }
@@ -323,12 +327,12 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 20: Rain (Denser)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
-        if (c % 2 === (r % 2)) { // Diagonal rain
+        if (c % 2 === (r % 2)) { 
           pattern[c][r] = 1;
         }
       }
@@ -336,7 +340,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 21: Waves (with filler)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
@@ -344,7 +348,7 @@ const brickPatterns = [
       pattern[c][r] = 1;
       pattern[c][r+1] = 1;
     }
-    // Add random filler
+    
     for (let c = 0; c < brickColumnCount; c++) {
       for (let r = 0; r < brickRowCount; r++) {
         if (pattern[c][r] === 0 && Math.random() < 0.15) {
@@ -355,7 +359,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 22: Dense Random
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     for (let c = 0; c < brickColumnCount; c++) {
@@ -366,7 +370,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 23: Concentric Circles (Thicker)
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     const midC = brickColumnCount / 2;
@@ -374,7 +378,7 @@ const brickPatterns = [
     for (let r = 0; r < brickRowCount; r++) {
       for (let c = 0; c < brickColumnCount; c++) {
         const dist = Math.sqrt(Math.pow(c - midC, 2) + Math.pow(r - midR, 2));
-        if (Math.floor(dist) % 2 === 0) { // Thicker circles
+        if (Math.floor(dist) % 2 === 0) { 
           pattern[c][r] = 1;
         }
       }
@@ -382,7 +386,7 @@ const brickPatterns = [
     return pattern;
   },
 
-  // Pattern 24: Thick Spiral
+  
   () => {
     const pattern = Array.from({ length: brickColumnCount }, () => Array(brickRowCount).fill(0));
     let top = 0, bottom = brickRowCount - 1, left = 0, right = brickColumnCount - 1;
@@ -424,6 +428,14 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
   const brickCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const bgCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const brickHeightRef = useRef(20);
+  const brickPaddingRef = useRef(10);
+  const brickOffsetTopRef = useRef(30);
+  const ballRadiusRef = useRef(10);
+  const paddleWidthRef = useRef(100);
+  const paddleHeightRef = useRef(20);
+  const initialSpeedRef = useRef(4);
+
   const scoreRef = useRef(0);
   const bricksRemainingRef = useRef(0);
   const ballsRef = useRef<Ball[]>([]);
@@ -438,9 +450,8 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
   const speedRef = useRef(5);
   const frameWidth = 5;
   const framePathRef = useRef<Path2D | null>(null);
-  const brickHeight = 15;
-  const brickPadding = 10;
-  const brickOffsetTop = 30;
+  
+
   const brickWidthRef = useRef(0);
   const brickOffsetLeftRef = useRef(0);
   const gameOverAnimationRef = useRef(0);
@@ -529,7 +540,7 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
   };
 
   const drawBall = (ctx: CanvasRenderingContext2D, ball: Ball, logoImage: HTMLImageElement) => {
-    // Draw trail
+    
     ball.trail.forEach((p, i) => {
       const opacity = (i + 1) / ball.trail.length;
       ctx.beginPath();
@@ -597,21 +608,21 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
       for (let r = 0; r < brickRowCount; r++) {
         const brick = bricksRef.current[c][r];
         if (brick.health > 0) {
-          const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-          const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+          const brickX = c * (brickWidth + brickPaddingRef.current) + brickOffsetLeft;
+          const brickY = r * (brickHeightRef.current + brickPaddingRef.current) + brickOffsetTopRef.current;
           ctx.save();
           ctx.beginPath();
-          ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 5);
+          ctx.roundRect(brickX, brickY, brickWidth, brickHeightRef.current, 5);
           ctx.closePath();
           ctx.globalAlpha = brick.health > 1 ? 1.0 : 0.7;
           ctx.fillStyle = brick.color;
           ctx.fill();
 
-          // 3D effect
+          
           ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-          ctx.fillRect(brickX + 2, brickY + 2, brickWidth - 4, brickHeight - 4);
+          ctx.fillRect(brickX + 2, brickY + 2, brickWidth - 4, brickHeightRef.current - 4);
 
-          const gradient = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight);
+          const gradient = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeightRef.current);
           gradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
           gradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
           ctx.fillStyle = gradient;
@@ -627,23 +638,23 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
     if (!ctx) return;
     const brickWidth = brickWidthRef.current;
     const brickOffsetLeft = brickOffsetLeftRef.current;
-    const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-    const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
-    ctx.clearRect(brickX - 2, brickY - 2, brickWidth + 4, brickHeight + 4);
+    const brickX = c * (brickWidth + brickPaddingRef.current) + brickOffsetLeft;
+    const brickY = r * (brickHeightRef.current + brickPaddingRef.current) + brickOffsetTopRef.current;
+    ctx.clearRect(brickX - 2, brickY - 2, brickWidth + 4, brickHeightRef.current + 4);
     if (brick.health > 0) {
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(brickX, brickY, brickWidth, brickHeight, 5);
+      ctx.roundRect(brickX, brickY, brickWidth, brickHeightRef.current, 5);
       ctx.closePath();
       ctx.globalAlpha = brick.health > 1 ? 1.0 : 0.7;
       ctx.fillStyle = brick.color;
       ctx.fill();
 
-      // 3D effect
+      
       ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-      ctx.fillRect(brickX + 2, brickY + 2, brickWidth - 4, brickHeight - 4);
+      ctx.fillRect(brickX + 2, brickY + 2, brickWidth - 4, brickHeightRef.current - 4);
 
-      const gradient = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight);
+      const gradient = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeightRef.current);
       gradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
       ctx.fillStyle = gradient;
@@ -726,14 +737,9 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 48px Orbitron, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#f09';
-    ctx.shadowBlur = 20;
-    ctx.fillText('Rialo Bounce', ctx.canvas.width / 2, frameWidth + usableHeight / 2 - 50);
-    ctx.shadowBlur = 0;
     ctx.font = '24px Poppins, sans-serif';
-    ctx.fillText('Click or Press Space to Start', ctx.canvas.width / 2, frameWidth + usableHeight / 2 + 20);
+    ctx.textAlign = 'center';
+    ctx.fillText('Click or Press Space to Start', ctx.canvas.width / 2, frameWidth + usableHeight / 2);
   };
 
   const drawGameOver = (ctx: CanvasRenderingContext2D) => {
@@ -746,8 +752,6 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
     ctx.fillStyle = 'white';
     ctx.font = 'bold 60px Orbitron, sans-serif';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#f09';
-    ctx.shadowBlur = 20;
     ctx.fillText('Game Over', ctx.canvas.width / 2, frameWidth + usableHeight / 2 - 60);
     ctx.font = '32px Poppins, sans-serif';
     ctx.fillText(`Final Score: ${scoreRef.current}`, ctx.canvas.width / 2, frameWidth + usableHeight / 2);
@@ -766,13 +770,13 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
     ctx.fillStyle = 'white';
     ctx.font = 'bold 60px Orbitron, sans-serif';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#fdbb2d';
-    ctx.shadowBlur = 20;
     ctx.fillText('Pattern Cleared!', ctx.canvas.width / 2, frameWidth + usableHeight / 2 - 60);
     ctx.font = '20px Poppins, sans-serif';
     ctx.fillText('Click to Play Again', ctx.canvas.width / 2, frameWidth + usableHeight / 2 + 50);
     ctx.restore();
   };
+
+
 
   const resetBallsAndPaddle = useCallback(() => {
     const canvas = canvasRef.current;
@@ -780,15 +784,15 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
     ballsRef.current = [{
       x: canvas.width / 2,
       y: canvas.height - 50,
-      vx: 4,
-      vy: -4,
-      radius: 15,
+      vx: initialSpeedRef.current,
+      vy: -initialSpeedRef.current,
+      radius: ballRadiusRef.current,
       trail: [],
     }];
     paddleRef.current = {
-      x: (canvas.width - 100) / 2,
-      width: 100,
-      height: 20,
+      x: (canvas.width - paddleWidthRef.current) / 2,
+      width: paddleWidthRef.current,
+      height: paddleHeightRef.current,
     };
     targetPaddleXRef.current = paddleRef.current.x;
   }, []);
@@ -850,7 +854,7 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
               y: canvas.height - paddle.height - 20,
               vx: (Math.random() - 0.5) * 8,
               vy: -5,
-              radius: 15,
+              radius: ballRadiusRef.current,
               trail: [],
             };
             ballsRef.current.push(newBall);
@@ -878,7 +882,7 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
     ball.x += ball.vx * delta;
     ball.y += ball.vy * delta;
 
-    // Wall collisions
+    
     if (ball.x + ball.radius > canvas.width - frameWidth) {
       ball.x = canvas.width - ball.radius - frameWidth;
       ball.vx = -Math.abs(ball.vx);
@@ -892,7 +896,7 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
       ball.vy = Math.abs(ball.vy);
     }
 
-    // Paddle collision
+    
     const hitPaddle =
       ball.y + ball.radius >= canvas.height - paddle.height &&
       ball.x >= paddle.x &&
@@ -912,23 +916,23 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
       }
     }
 
-    // Brick collision
+    
     const ballLeft = ball.x - ball.radius;
     const ballRight = ball.x + ball.radius;
     const ballTop = ball.y - ball.radius;
     const ballBottom = ball.y + ball.radius;
 
-    const startCol = Math.max(0, Math.floor((ballLeft - brickOffsetLeft) / (brickWidth + brickPadding)));
-    const endCol = Math.min(brickColumnCount - 1, Math.ceil((ballRight - brickOffsetLeft) / (brickWidth + brickPadding)));
-    const startRow = Math.max(0, Math.floor((ballTop - brickOffsetTop) / (brickHeight + brickPadding)));
-    const endRow = Math.min(brickRowCount - 1, Math.ceil((ballBottom - brickOffsetTop) / (brickHeight + brickPadding)));
+    const startCol = Math.max(0, Math.floor((ballLeft - brickOffsetLeft) / (brickWidth + brickPaddingRef.current)));
+    const endCol = Math.min(brickColumnCount - 1, Math.ceil((ballRight - brickOffsetLeft) / (brickWidth + brickPaddingRef.current)));
+    const startRow = Math.max(0, Math.floor((ballTop - brickOffsetTopRef.current) / (brickHeightRef.current + brickPaddingRef.current)));
+    const endRow = Math.min(brickRowCount - 1, Math.ceil((ballBottom - brickOffsetTopRef.current) / (brickHeightRef.current + brickPaddingRef.current)));
 
     for (let c = startCol; c <= endCol; c++) {
       for (let r = startRow; r <= endRow; r++) {
         const b = bricksRef.current[c][r];
         if (b.health > 0) {
-          const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-          const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+          const brickX = c * (brickWidth + brickPaddingRef.current) + brickOffsetLeft;
+          const brickY = r * (brickHeightRef.current + brickPaddingRef.current) + brickOffsetTopRef.current;
           b.x = brickX;
           b.y = brickY;
 
@@ -936,15 +940,15 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
             ball.x + ball.radius > b.x &&
             ball.x - ball.radius < b.x + brickWidth &&
             ball.y + ball.radius > b.y &&
-            ball.y - ball.radius < b.y + brickHeight
+            ball.y - ball.radius < b.y + brickHeightRef.current
           ) {
             const prevBallX = ball.x - ball.vx * delta;
             const prevBallY = ball.y - ball.vy * delta;
 
-            if (prevBallY + ball.radius <= b.y || prevBallY - ball.radius >= b.y + brickHeight) {
+            if (prevBallY + ball.radius <= b.y || prevBallY - ball.radius >= b.y + brickHeightRef.current) {
               ball.vy = -ball.vy;
               if (ball.y < b.y) ball.y = b.y - ball.radius;
-              else ball.y = b.y + brickHeight + ball.radius;
+              else ball.y = b.y + brickHeightRef.current + ball.radius;
             } else if (prevBallX + ball.radius <= b.x || prevBallX - ball.radius >= b.x + brickWidth) {
               ball.vx = -ball.vx;
               if (ball.x < b.x) ball.x = b.x - ball.radius;
@@ -1015,9 +1019,11 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.width = Math.min(window.innerWidth * 0.9, 1200);
-    canvas.height = window.innerHeight * 0.7;
+    const container = canvas?.parentElement;
+    if (!canvas || !container) return;
+
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
 
     if (brickCanvasRef.current) {
       brickCanvasRef.current.width = canvas.width;
@@ -1028,12 +1034,21 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
       bgCanvasRef.current.height = canvas.height;
     }
 
+    
+    ballRadiusRef.current = canvas.width / 45;
+    paddleWidthRef.current = canvas.width / 7;
+    paddleHeightRef.current = canvas.height / 35;
+    initialSpeedRef.current = canvas.width / 130;
+
+    const brickAreaHeight = canvas.height * 0.5;
+    brickPaddingRef.current = canvas.width / 100;
+    brickOffsetTopRef.current = canvas.height / 25;
+    
     const usableWidth = canvas.width - frameWidth * 2;
-    brickWidthRef.current =
-      (usableWidth - (brickColumnCount - 1) * brickPadding) / brickColumnCount;
-    brickOffsetLeftRef.current =
-      (canvas.width - (brickColumnCount * brickWidthRef.current +
-        (brickColumnCount - 1) * brickPadding)) / 2;
+    brickWidthRef.current = (usableWidth - (brickColumnCount - 1) * brickPaddingRef.current) / brickColumnCount;
+    brickHeightRef.current = (brickAreaHeight - (brickRowCount - 1) * brickPaddingRef.current) / brickRowCount;
+    
+    brickOffsetLeftRef.current = (canvas.width - (brickColumnCount * brickWidthRef.current + (brickColumnCount - 1) * brickPaddingRef.current)) / 2;
 
     framePathRef.current = createFramePath(canvas.getContext('2d')!);
     initializeBricks();
@@ -1054,7 +1069,7 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
       if (gameStateRef.current === 'waiting') {
         resetGame(true);
       } else if (gameStateRef.current === 'gameOver' || gameStateRef.current === 'win') {
-        setGameState('waiting'); // Go back to start screen
+        setGameState('waiting'); 
       }
     };
 
@@ -1068,6 +1083,26 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
         targetPaddleXRef.current = newX;
         mousePosRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
       }
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault(); 
+      if (paddleRef.current && canvas && e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        let newX = e.touches[0].clientX - rect.left - paddleRef.current.width / 2;
+        const usableWidth = canvas.width - frameWidth * 2;
+        newX = Math.max(frameWidth, newX);
+        newX = Math.min(usableWidth - paddleRef.current.width + frameWidth, newX);
+        targetPaddleXRef.current = newX;
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      
+      if (gameStateRef.current === 'waiting' || gameStateRef.current === 'gameOver' || gameStateRef.current === 'win') {
+        handleUserAction();
+      }
+      e.preventDefault(); 
     };
 
     const keyHandler = (e: KeyboardEvent) => {
@@ -1089,17 +1124,23 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
     resizeCanvas();
     frameId = requestAnimationFrame(loop);
 
+    
     window.addEventListener('resize', resizeCanvas);
     canvas.addEventListener('click', handleUserAction);
-    canvas.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('keydown', keyHandler);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
 
     return () => {
+      
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', resizeCanvas);
       canvas.removeEventListener('click', handleUserAction);
+      document.removeEventListener('keydown', keyHandler);
       canvas.removeEventListener('mousemove', handleMouseMove);
-      document.addEventListener('keydown', keyHandler);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
     };
   }, [resetGame, resizeCanvas]);
 
@@ -1108,7 +1149,8 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
       ref={canvasRef}
       style={{
         display: 'block',
-        margin: 'auto',
+        width: '100%',
+        height: '100%',
         backgroundColor: 'transparent',
       }}
     />
@@ -1116,4 +1158,3 @@ const RialoBounceCanvas: React.FC<RialoBounceCanvasProps> = ({
 };
 
 export default RialoBounceCanvas;
-

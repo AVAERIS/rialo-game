@@ -1,31 +1,32 @@
-import { Link } from 'react-router-dom';
+import { useTransition } from '../context/TransitionContext';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import NebulaBackground from '../components/NebulaBackground';
 
-// --- Game Constants ---
+
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 600;
-const INITIAL_SPEED_MS = 120;
+const INITIAL_SPEED_MS = 100;
 const MIN_SPEED_MS = 40;
-const SPEED_INCREMENT = 3;
+const SPEED_INCREMENT = 2;
 const MOBILE_BREAKPOINT = 768;
 
-// --- Types ---
+
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 type SnakeSegment = { x: number; y: number };
 type FoodItem = { x: number; y: number };
-type Prank = 'SPEED_UP' | 'SLOW_DOWN' | 'GET_FAT' | 'GET_SLIM' | 'REVERSE_CONTROLS' | 'GHOST_MODE' | 'NORMAL';
-
-const PRANKS: Prank[] = ['SPEED_UP', 'SLOW_DOWN', 'GET_FAT', 'GET_SLIM', 'REVERSE_CONTROLS', 'GHOST_MODE', 'NORMAL', 'NORMAL', 'NORMAL'];
 
 const getInitialSnake = () => [
   { x: 15, y: 15 },
   { x: 15, y: 16 },
   { x: 15, y: 17 },
+  { x: 15, y: 18 },
+  { x: 15, y: 19 },
 ];
 
 const SnakePage = () => {
-  // --- State Management ---
+  const { startTransition } = useTransition();
+  
   const [snake, setSnake] = useState<SnakeSegment[]>(getInitialSnake());
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [direction, setDirection] = useState<Direction>('UP');
@@ -33,20 +34,18 @@ const SnakePage = () => {
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
-  const [activePrank, setActivePrank] = useState<Prank | 'NONE'>('NONE');
-  const [prankTimer, setPrankTimer] = useState(0);
-  const [snakeWidth, setSnakeWidth] = useState(GRID_SIZE);
-  const [isReversed, setIsReversed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [particles, setParticles] = useState<any[]>([]);
 
-  // --- Refs ---
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameLoopRef = useRef<number>();
   const lastUpdateTimeRef = useRef<number>(0);
   const directionQueueRef = useRef<Direction[]>([]);
   const foodImageRef = useRef<HTMLImageElement | null>(null);
+  const touchStartRef = useRef({ x: 0, y: 0 });
 
-  // --- Mobile Detection ---
+  
   useEffect(() => {
     const checkDevice = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     checkDevice();
@@ -54,7 +53,7 @@ const SnakePage = () => {
     return () => window.removeEventListener('resize', checkDevice);
   }, []);
 
-  // --- Input Handling ---
+  
   const queueDirectionChange = useCallback((newDirection: Direction | null) => {
     if (isPaused && !isGameOver) {
       setIsPaused(false);
@@ -66,11 +65,50 @@ const SnakePage = () => {
     }
   }, [isPaused, isGameOver]);
 
-  // --- Helper Functions ---
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const start = touchStartRef.current;
+      const end = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+
+      const deltaX = end.x - start.x;
+      const deltaY = end.y - start.y;
+      const swipeThreshold = 30; 
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        
+        if (Math.abs(deltaX) > swipeThreshold) {
+          queueDirectionChange(deltaX > 0 ? 'RIGHT' : 'LEFT');
+        }
+      } else {
+        
+        if (Math.abs(deltaY) > swipeThreshold) {
+          queueDirectionChange(deltaY > 0 ? 'DOWN' : 'UP');
+        }
+      }
+    };
+
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [queueDirectionChange]);
+
+  
   const generateFoodBatch = useCallback(() => {
-    const newFoods: FoodItem[] = [];
-    const foodCount = Math.floor(Math.random() * 3) + 3; // Randomly 3 to 5 foods
     setSnake(currentSnake => {
+      const newFoods: FoodItem[] = [];
+      const foodCount = Math.floor(Math.random() * 4) + 2; 
       let attempts = 0;
       while (newFoods.length < foodCount && attempts < 50) {
         const newFoodPosition = {
@@ -78,8 +116,8 @@ const SnakePage = () => {
           y: Math.floor(Math.random() * (CANVAS_HEIGHT / GRID_SIZE)),
         };
         const isOnSnake = currentSnake.some(s => s.x === newFoodPosition.x && s.y === newFoodPosition.y);
-        const isTooClose = newFoods.some(f => f.x === newFoodPosition.x && f.y === newFoodPosition.y);
-        if (!isOnSnake && !isTooClose) {
+        const isOnFood = newFoods.some(f => f.x === newFoodPosition.x && f.y === newFoodPosition.y);
+        if (!isOnSnake && !isOnFood) {
           newFoods.push(newFoodPosition);
         }
         attempts++;
@@ -89,25 +127,6 @@ const SnakePage = () => {
     });
   }, []);
 
-  const resetPranks = useCallback(() => {
-    setActivePrank('NONE');
-    setSpeed(Math.max(MIN_SPEED_MS, INITIAL_SPEED_MS - (Math.floor(score / 5) * SPEED_INCREMENT * 5)));
-    setSnakeWidth(GRID_SIZE);
-    setIsReversed(false);
-  }, [score]);
-
-  const applyPrank = useCallback(() => {
-    const prank = PRANKS[Math.floor(Math.random() * PRANKS.length)];
-    setActivePrank(prank);
-    setPrankTimer(5000 / speed);
-    switch (prank) {
-      case 'SPEED_UP': setSpeed(s => Math.max(MIN_SPEED_MS, s / 2)); break;
-      case 'SLOW_DOWN': setSpeed(s => s * 1.5); break;
-      case 'GET_FAT': setSnakeWidth(GRID_SIZE * 1.5); break;
-      case 'REVERSE_CONTROLS': setIsReversed(true); break;
-    }
-  }, [speed]);
-
   const resetGame = useCallback(() => {
     setSnake(getInitialSnake());
     setDirection('UP');
@@ -115,25 +134,39 @@ const SnakePage = () => {
     setSpeed(INITIAL_SPEED_MS);
     setIsGameOver(false);
     setScore(0);
-    resetPranks();
     generateFoodBatch();
     setIsPaused(true);
-  }, [generateFoodBatch, resetPranks]);
+  }, [generateFoodBatch]);
 
   useEffect(() => {
-      if(!isPaused) generateFoodBatch();
+    if (!isPaused) {
+      generateFoodBatch();
+    }
   }, [isPaused, generateFoodBatch]);
 
-  // --- Game Loop ---
+  const timestampRef = useRef<number>(0);
+
+  
   const gameLoop = useCallback((timestamp: number) => {
     if (isGameOver || isPaused) return;
+    timestampRef.current = timestamp;
+
+    
+    setParticles(prevParticles =>
+      prevParticles.map(p => ({
+        ...p,
+        x: p.x + p.vx,
+        y: p.y + p.vy,
+        alpha: p.alpha - 0.02,
+      })).filter(p => p.alpha > 0)
+    );
 
     if (timestamp - lastUpdateTimeRef.current > speed) {
       lastUpdateTimeRef.current = timestamp;
 
       if (directionQueueRef.current.length > 0) {
         const nextDir = directionQueueRef.current.shift();
-        if(nextDir) setDirection(nextDir);
+        if (nextDir) setDirection(nextDir);
       }
 
       setSnake(prevSnake => {
@@ -147,6 +180,7 @@ const SnakePage = () => {
           case 'RIGHT': head.x += 1; break;
         }
 
+        
         if (head.x < 0) head.x = (CANVAS_WIDTH / GRID_SIZE) - 1;
         if (head.x >= CANVAS_WIDTH / GRID_SIZE) head.x = 0;
         if (head.y < 0) head.y = (CANVAS_HEIGHT / GRID_SIZE) - 1;
@@ -154,6 +188,7 @@ const SnakePage = () => {
 
         newSnake.unshift(head);
 
+        
         for (let i = 1; i < newSnake.length; i++) {
           if (head.x === newSnake[i].x && head.y === newSnake[i].y) {
             setIsGameOver(true);
@@ -161,37 +196,49 @@ const SnakePage = () => {
           }
         }
 
+        
         const foodIndex = foods.findIndex(f => f.x === head.x && f.y === head.y);
         if (foodIndex !== -1) {
+          const eatenFood = foods[foodIndex];
+          
+          
+          const headHue = (timestampRef.current / 20) % 360;
+          const headColor = `hsl(${headHue}, 80%, 70%)`;
+
+          for (let i = 0; i < 15; i++) {
+            const angle = Math.random() * 2 * Math.PI;
+            const particleSpeed = Math.random() * 3 + 1;
+            setParticles(prev => [...prev, {
+              x: eatenFood.x * GRID_SIZE + GRID_SIZE / 2,
+              y: eatenFood.y * GRID_SIZE + GRID_SIZE / 2,
+              vx: Math.cos(angle) * particleSpeed,
+              vy: Math.sin(angle) * particleSpeed,
+              radius: Math.random() * 2 + 1,
+              alpha: 1,
+              color: headColor,
+            }]);
+          }
+
+          
+          newSnake.push({ ...newSnake[newSnake.length - 1] });
+
           setScore(s => s + 1);
-          applyPrank();
+          setSpeed(s => Math.max(MIN_SPEED_MS, s - SPEED_INCREMENT));
+          
           const newFoods = foods.filter((_, index) => index !== foodIndex);
           if (newFoods.length === 0) {
             generateFoodBatch();
           } else {
             setFoods(newFoods);
           }
-          if ((score + 1) % 5 === 0) {
-            setSpeed(s => Math.max(MIN_SPEED_MS, s - SPEED_INCREMENT * 5));
-          }
         } else {
-          if (activePrank === 'GET_SLIM' && newSnake.length > 2) {
-              newSnake.pop(); newSnake.pop();
-          } else {
-              newSnake.pop();
-          }
+          newSnake.pop();
         }
         return newSnake;
       });
-
-      if (prankTimer > 0) {
-        setPrankTimer(t => t - 1);
-      } else {
-        resetPranks();
-      }
     }
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [isGameOver, isPaused, speed, direction, foods, score, activePrank, prankTimer, applyPrank, generateFoodBatch, resetPranks]);
+  }, [isGameOver, isPaused, speed, direction, foods, generateFoodBatch]);
 
   useEffect(() => {
     if (!isPaused && !isGameOver) {
@@ -203,88 +250,121 @@ const SnakePage = () => {
     return () => { if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current); };
   }, [isPaused, isGameOver, gameLoop]);
 
-  // --- Drawing ---
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!ctx) return;
 
-    ctx.fillStyle = '#a9ddd3';
+    ctx.fillStyle = '#0f172a'; 
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    const isGhost = activePrank === 'GHOST_MODE';
-    snake.forEach((segment, index) => {
-      ctx.fillStyle = isGhost && index !== 0 ? 'rgba(1, 1, 1, 0.3)' : '#010101';
-      const offset = (GRID_SIZE - snakeWidth) / 2;
-      ctx.fillRect(segment.x * GRID_SIZE + offset, segment.y * GRID_SIZE + offset, snakeWidth, snakeWidth);
-
-      if (index === 0) {
-        ctx.fillStyle = '#e8e3d5';
-        const eyeSize = GRID_SIZE / 5;
-        switch (direction) {
-          case 'UP':
-            ctx.fillRect(segment.x * GRID_SIZE + eyeSize, segment.y * GRID_SIZE + eyeSize, eyeSize, eyeSize);
-            ctx.fillRect(segment.x * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), segment.y * GRID_SIZE + eyeSize, eyeSize, eyeSize);
-            break;
-          case 'DOWN':
-            ctx.fillRect(segment.x * GRID_SIZE + eyeSize, segment.y * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), eyeSize, eyeSize);
-            ctx.fillRect(segment.x * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), segment.y * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), eyeSize, eyeSize);
-            break;
-          case 'LEFT':
-            ctx.fillRect(segment.x * GRID_SIZE + eyeSize, segment.y * GRID_SIZE + eyeSize, eyeSize, eyeSize);
-            ctx.fillRect(segment.x * GRID_SIZE + eyeSize, segment.y * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), eyeSize, eyeSize);
-            break;
-          case 'RIGHT':
-            ctx.fillRect(segment.x * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), segment.y * GRID_SIZE + eyeSize, eyeSize, eyeSize);
-            ctx.fillRect(segment.x * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), segment.y * GRID_SIZE + (GRID_SIZE - 2 * eyeSize), eyeSize, eyeSize);
-            break;
-        }
-      }
-    });
-
     if (foodImageRef.current) {
-      const foodSize = GRID_SIZE * 2;
-      const foodOffset = (foodSize - GRID_SIZE) / 2;
+      const foodSize = GRID_SIZE;
       foods.forEach(food => {
-        ctx.drawImage(foodImageRef.current!, (food.x * GRID_SIZE) - foodOffset, (food.y * GRID_SIZE) - foodOffset, foodSize, foodSize);
+        const centerX = food.x * GRID_SIZE + GRID_SIZE / 2;
+        const centerY = food.y * GRID_SIZE + GRID_SIZE / 2;
+
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, foodSize / 2, 0, 2 * Math.PI);
+        ctx.fill();
+
+        
+        ctx.drawImage(foodImageRef.current!, centerX - foodSize / 2, centerY - foodSize / 2, foodSize, foodSize);
       });
     }
+
+              
+              snake.forEach((segment, index) => {
+                const radius = GRID_SIZE / 2;
+                const centerX = segment.x * GRID_SIZE + radius;
+                const centerY = segment.y * GRID_SIZE + radius;
+          
+                
+                const hue = (timestampRef.current / 20 + index * 10) % 360;
+                ctx.fillStyle = `hsl(${hue}, 80%, 70%)`;
+                
+                
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fill();
+          
+                
+                ctx.strokeStyle = '#0f172a'; 
+                ctx.lineWidth = 2;
+                ctx.stroke();
+          
+                
+                      if (index === 0) {
+                        ctx.fillStyle = '#1E293B'; 
+                        const eyeRadius = GRID_SIZE / 8;
+                        let eye1X, eye1Y, eye2X, eye2Y;
+                        switch (direction) {
+                          case 'UP':
+                            eye1X = centerX - GRID_SIZE / 4; eye1Y = centerY - GRID_SIZE / 4;
+                            eye2X = centerX + GRID_SIZE / 4; eye2Y = centerY - GRID_SIZE / 4;
+                            break;
+                          case 'DOWN':
+                            eye1X = centerX - GRID_SIZE / 4; eye1Y = centerY + GRID_SIZE / 4;
+                            eye2X = centerX + GRID_SIZE / 4; eye2Y = centerY + GRID_SIZE / 4;
+                            break;
+                          case 'LEFT':
+                            eye1X = centerX - GRID_SIZE / 4; eye1Y = centerY - GRID_SIZE / 4;
+                            eye2X = centerX - GRID_SIZE / 4; eye2Y = centerY + GRID_SIZE / 4;
+                            break;
+                          case 'RIGHT':
+                            eye1X = centerX + GRID_SIZE / 4; eye1Y = centerY - GRID_SIZE / 4;
+                            eye2X = centerX + GRID_SIZE / 4; eye2Y = centerY + GRID_SIZE / 4;
+                            break;
+                        }
+                        ctx.beginPath(); ctx.arc(eye1X, eye1Y, eyeRadius, 0, 2 * Math.PI); ctx.fill();
+                        ctx.beginPath(); ctx.arc(eye2X, eye2Y, eyeRadius, 0, 2 * Math.PI); ctx.fill();
+                      }              });    particles.forEach(p => {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
     
     if (isPaused && !isGameOver) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 8;
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 40px sans-serif';
+        ctx.font = 'bold 48px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Click to Start', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
     }
 
-  }, [snake, foods, activePrank, snakeWidth, isPaused, isGameOver, direction]);
+  }, [snake, foods, isPaused, isGameOver, direction, particles]);
 
-  // --- Keyboard Input ---
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const currentDirection = directionQueueRef.current.length > 0 ? directionQueueRef.current[directionQueueRef.current.length - 1] : direction;
       let newDirection: Direction | null = null;
-      const up = isReversed ? 'DOWN' : 'UP';
-      const down = isReversed ? 'UP' : 'DOWN';
-      const left = isReversed ? 'RIGHT' : 'LEFT';
-      const right = isReversed ? 'LEFT' : 'RIGHT';
 
       switch (e.key) {
-        case 'ArrowUp': case 'w': if (currentDirection !== down) newDirection = up; break;
-        case 'ArrowDown': case 's': if (currentDirection !== up) newDirection = down; break;
-        case 'ArrowLeft': case 'a': if (currentDirection !== right) newDirection = left; break;
-        case 'ArrowRight': case 'd': if (currentDirection !== left) newDirection = right; break;
+        case 'ArrowUp': case 'w': if (currentDirection !== 'DOWN') newDirection = 'UP'; break;
+        case 'ArrowDown': case 's': if (currentDirection !== 'UP') newDirection = 'DOWN'; break;
+        case 'ArrowLeft': case 'a': if (currentDirection !== 'RIGHT') newDirection = 'LEFT'; break;
+        case 'ArrowRight': case 'd': if (currentDirection !== 'LEFT') newDirection = 'RIGHT'; break;
       }
       queueDirectionChange(newDirection);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [direction, isReversed, queueDirectionChange]);
+  }, [direction, queueDirectionChange]);
 
-  // --- Asset Preloading ---
+  
   useEffect(() => {
     const img = new Image();
     img.src = '/logo.png';
@@ -293,63 +373,54 @@ const SnakePage = () => {
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-rialo-beige p-4 font-sans">
-      <div className="text-center mb-2">
-        <h1 className="text-3xl md:text-4xl font-bold text-rialo-dark">Snake Game – Rialo Edition</h1>
-        <p className="text-rialo-dark/80 mt-1 text-sm md:text-base">Move the snake, eat the Rialo coins, and watch out for food pranks!</p>
-      </div>
+    <div className="relative w-full min-h-screen bg-black">
+      <NebulaBackground />
+      <div className="relative z-10 flex flex-col items-center justify-center w-full min-h-screen p-4 font-sans">
+        <main className="bg-slate-800/70 backdrop-blur-xl border border-white/10 w-full max-w-lg md:max-w-xl rounded-2xl shadow-2xl shadow-sky-500/10 p-4 sm:p-6 flex flex-col">
+          
+          <header className="text-center mb-4">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-100">Snake Game</h1>
+          </header>
 
-      <div className="w-full max-w-[600px] bg-rialo-dark text-white p-2 rounded-t-lg flex justify-between font-bold text-lg border-4 border-b-0 border-rialo-dark">
-        <span>SCORE: {score}</span>
-        {activePrank !== 'NONE' && <span className='animate-pulse'>PRANK: {activePrank}</span>}
-      </div>
+          <div className="w-full bg-slate-900/50 border border-white/10 p-3 rounded-lg text-center mb-4">
+            <span className="text-lg font-semibold text-slate-200 tracking-wider">SCORE: {score}</span>
+          </div>
 
-      <div className="w-full max-w-[608px] border-4 border-t-0 border-rialo-dark rounded-b-lg shadow-lg aspect-square">
-        <canvas
-          ref={canvasRef}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-          className="bg-rialo-mint rounded-b-md block w-full h-full"
-          onClick={() => isPaused && !isGameOver && setIsPaused(false)}
-        >
-          Your browser does not support the canvas.
-        </canvas>
-      </div>
-      
-      <div className="text-center mt-4 text-rialo-dark/70">
-        {!isMobile && <p>Use Arrow Keys / WASD to move.</p>}
-        <Link to="/" className="text-rialo-dark underline mt-2 inline-block hover:text-rialo-dark/80">Back to Home</Link>
-      </div>
+          <div className="w-full rounded-xl overflow-hidden aspect-square shadow-inner bg-slate-900">
+            <canvas
+              ref={canvasRef}
+              width={CANVAS_WIDTH}
+              height={CANVAS_HEIGHT}
+              className="block w-full h-auto"
+              onClick={() => isPaused && !isGameOver && setIsPaused(false)}
+            >
+              Your browser does not support the canvas.
+            </canvas>
+          </div>
 
-      {isMobile && (
-        <div className="mt-4 grid grid-cols-3 grid-rows-2 gap-2 w-48">
-          <div className="col-start-2 row-start-1 flex justify-center items-center">
-            <button onTouchStart={(e) => {e.preventDefault(); queueDirectionChange('UP')}} onMouseDown={(e) => e.preventDefault()} onClick={(e) => {e.preventDefault()}} className="w-16 h-16 bg-rialo-dark/80 text-white font-bold rounded-lg text-2xl active:bg-rialo-dark">▲</button>
-          </div>
-          <div className="col-start-1 row-start-2 flex justify-center items-center">
-            <button onTouchStart={(e) => {e.preventDefault(); queueDirectionChange('LEFT')}} onMouseDown={(e) => e.preventDefault()} onClick={(e) => {e.preventDefault()}} className="w-16 h-16 bg-rialo-dark/80 text-white font-bold rounded-lg text-2xl active:bg-rialo-dark">◀</button>
-          </div>
-          <div className="col-start-3 row-start-2 flex justify-center items-center">
-            <button onTouchStart={(e) => {e.preventDefault(); queueDirectionChange('RIGHT')}} onMouseDown={(e) => e.preventDefault()} onClick={(e) => {e.preventDefault()}} className="w-16 h-16 bg-rialo-dark/80 text-white font-bold rounded-lg text-2xl active:bg-rialo-dark">▶</button>
-          </div>
-          <div className="col-start-2 row-start-2 flex justify-center items-center">
-            <button onTouchStart={(e) => {e.preventDefault(); queueDirectionChange('DOWN')}} onMouseDown={(e) => e.preventDefault()} onClick={(e) => {e.preventDefault()}} className="w-16 h-16 bg-rialo-dark/80 text-white font-bold rounded-lg text-2xl active:bg-rialo-dark">▼</button>
-          </div>
-        </div>
-      )}
+          <footer className="text-center mt-4 pt-2">
+            {isMobile && <p className="text-sm text-slate-400">Swipe on the screen to move.</p>}
+          </footer>
+          
+        </main>
 
-      {isGameOver && (
-        <div className="absolute inset-0 bg-black/60 flex justify-center items-center transition-opacity duration-300 z-50">
-          <div className="bg-white p-8 rounded-lg text-center shadow-xl max-w-sm mx-4">
-            <h2 className="text-3xl font-bold mb-2 text-rialo-dark">Game Over!</h2>
-            <p className="text-xl mb-6 text-rialo-dark/80">Final Score: {score}</p>
-            <div className="flex gap-4 justify-center">
-              <button onClick={resetGame} className="px-6 py-2 bg-rialo-mint font-semibold rounded-lg hover:bg-opacity-80 transition-colors">Restart</button>
-              <Link to="/" className="px-6 py-2 bg-gray-300 font-semibold rounded-lg hover:bg-gray-400 transition-colors">Back to Home</Link>
+        <footer className="text-center mt-6">
+          <button onClick={() => startTransition('/')} className="text-sm text-slate-400 underline hover:text-slate-200 transition-colors">Back to Home</button>
+        </footer>
+
+        {isGameOver && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center transition-opacity duration-300 z-50 p-4">
+            <div className="bg-slate-800/80 border border-white/10 p-8 rounded-xl text-center shadow-2xl max-w-sm w-full">
+              <h2 className="text-4xl font-bold mb-2 text-slate-100 text-shadow">Game Over!</h2>
+              <p className="text-xl mb-6 text-slate-300 text-shadow">Final Score: {score}</p>
+              <div className="flex gap-4 justify-center">
+                <button onClick={resetGame} className="px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 transition-colors">Restart</button>
+                <button onClick={() => startTransition('/')} className="px-6 py-2 bg-slate-700 font-semibold rounded-lg hover:bg-slate-600 transition-colors">Back to Home</button>
+              </div>
             </div>
-          </div>
-        </div> 
-      )}
+          </div> 
+        )}
+      </div>
     </div>
   );
 };

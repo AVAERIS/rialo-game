@@ -1,28 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import RialoBounceCanvas, { GameState } from '../components/RialoBounceCanvas';
-import { Link } from 'react-router-dom';
-import bgBounce from '../assets/bgBounce.png';
-import RotateDeviceOverlay from '../components/RotateDeviceOverlay';
+import { useTransition } from '../context/TransitionContext';
+import NebulaBackground from '../components/NebulaBackground';
 
 const RialoBouncePage: React.FC = () => {
+  const { startTransition } = useTransition();
   const [score, setScore] = useState(0);
   const [gameState, setGameState] = useState<GameState>('waiting');
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPortrait, setIsPortrait] = useState(false);
-
-  useEffect(() => {
-    const checkOrientation = () => {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        setIsPortrait(window.innerHeight > window.innerWidth);
-      }
-    };
-
-    window.addEventListener('resize', checkOrientation);
-    checkOrientation(); // Initial check
-
-    return () => window.removeEventListener('resize', checkOrientation);
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -31,56 +15,40 @@ const RialoBouncePage: React.FC = () => {
     };
   }, []);
 
-  const buttonStyle: React.CSSProperties = {
-    fontFamily: 'Poppins, sans-serif',
-    color: 'white',
-    textDecoration: 'none',
-    padding: '15px 30px',
-    background: isHovered ? 'linear-gradient(to right, #b21f1f, #fdbb2d)' : 'linear-gradient(to right, #fdbb2d, #b21f1f)',
-    borderRadius: '50px',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
-    fontSize: '18px',
-    fontWeight: 'bold',
-  };
-
-  if (isPortrait) {
-    return <RotateDeviceOverlay />;
-  }
-
   return (
-    <div style={{
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      fontFamily: 'Poppins, sans-serif',
-      padding: '20px',
-      backgroundImage: `url(${bgBounce})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
-    }}>
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <h1 style={{ fontFamily: 'Orbitron, sans-serif', fontSize: '72px', color: 'white', textShadow: '0 0 10px #fff, 0 0 20px #fff, 0 0 30px #f09, 0 0 40px #f09, 0 0 50px #f09, 0 0 60px #f09, 0 0 70px #f09' }}>Rialo Bounce</h1>
-      </div>
-      {gameState === 'playing' && <div style={{ color: 'white', fontSize: '32px', marginBottom: '20px', textAlign: 'center', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>Score: {score}</div>}
-      <RialoBounceCanvas
-        setScore={setScore}
-        gameState={gameState}
-        setGameState={setGameState}
-      />
-      <div style={{ marginTop: '30px' }}>
-        <Link
-          to="/"
-          style={buttonStyle}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          Back to Home
-        </Link>
+    <div className="relative w-full min-h-screen bg-black">
+      <NebulaBackground />
+      <div className="relative z-10 flex flex-col items-center justify-center w-full min-h-screen p-4 font-sans">
+        <main className="bg-slate-800/70 backdrop-blur-xl border border-white/10 w-full max-w-lg md:max-w-xl rounded-2xl shadow-2xl shadow-sky-500/10 p-4 sm:p-6 flex flex-col items-center">
+          
+          <header className="text-center mb-4">
+            <h1 
+              className="text-4xl sm:text-5xl font-bold text-white"
+              style={{ fontFamily: 'Orbitron, sans-serif' }}
+            >
+              Rialo Bounce
+            </h1>
+          </header>
+
+          <div className={`w-full bg-slate-900/50 border border-white/10 p-3 rounded-lg text-center mb-4 ${gameState === 'playing' ? 'visible' : 'invisible'}`}>
+            <span className="text-lg font-semibold text-slate-200 tracking-wider">SCORE: {score}</span>
+          </div>
+
+          <div className="w-full rounded-xl overflow-hidden aspect-square shadow-inner bg-slate-900">
+            <RialoBounceCanvas
+              setScore={setScore}
+              gameState={gameState}
+              setGameState={setGameState}
+            />
+          </div>
+
+        </main>
+
+        <footer className="text-center mt-6">
+          <button onClick={() => startTransition('/')} className="text-sm text-slate-400 underline hover:text-slate-200 transition-colors">
+            Back to Home
+          </button>
+        </footer>
       </div>
     </div>
   );
